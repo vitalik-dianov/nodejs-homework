@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
-
+require('dotenv').config();
 async function connectMongo() {
-  await mongoose.connect(
-    'mongodb+srv://admin:adminqwerty@clusterbase.enuivrc.mongodb.net/db-contacts?retryWrites=true&w=majority'
-  );
+  await mongoose.connect(process.env.MONGO_KEY);
   console.log('Connection to DB successfully');
 }
 
