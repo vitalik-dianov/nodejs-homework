@@ -11,6 +11,10 @@ const contactsSchema = new mongoose.Schema({
   phone: {
     type: String,
   },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'users',
+  },
   favorite: {
     type: Boolean,
     default: false,
