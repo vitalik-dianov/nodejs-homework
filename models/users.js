@@ -1,8 +1,12 @@
 require('dotenv').config();
+const fs = require('fs').promises;
+const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User } = require('../db/usersModel');
 const { createError } = require('../helpers/errors');
+const gravatar = require('gravatar');
+const Jimp = require('jimp');
 
 const register = async (email, password) => {
   try {
@@ -12,9 +16,16 @@ const register = async (email, password) => {
       throw createError(409, 'Email in use');
     }
 
+    const url = gravatar.url(
+      email,
+      { d: 'robohash', s: '250' },
+      false
+    );
+
     const user = User.create({
       email,
       password: await bcrypt.hash(password, 10),
+      avatarURL: url,
     });
 
     return user;
@@ -26,7 +37,6 @@ const register = async (email, password) => {
 const login = async (email, password) => {
   try {
     const user = await User.findOne({ email });
-    console.log(user);
     if (!user) {
       throw createError(401, 'Email or password is wrong!');
     }
@@ -48,7 +58,6 @@ const login = async (email, password) => {
 
     return await authenticate(token);
   } catch (error) {
-    // console.log(error);
     return error;
   }
 };
@@ -68,9 +77,25 @@ const logout = async id => {
   await User.findByIdAndUpdate(id, { token: null });
 };
 
+const uploadImage = async (filepath, filename, id) => {
+  const newPath = path.resolve(`./public/avatars/${filename}`);
+  const avatarURL = `/avatars/${filename}`;
+  const image = await Jimp.read(filepath);
+  try {
+    await image.resize(250, 250);
+    await image.writeAsync(newPath);
+    await User.findByIdAndUpdate(id, { avatarURL });
+    return avatarURL;
+  } catch (error) {
+    console.log(error.message);
+  } finally {
+    await fs.unlink(filepath);
+  }
+};
 module.exports = {
   register,
   login,
   authenticate,
   logout,
+  uploadImage,
 };
