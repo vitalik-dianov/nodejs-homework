@@ -5,11 +5,16 @@ const schema = Joi.object({
 });
 
 const express = require('express');
-const { register, login, logout } = require('../../models/users');
+const {
+  register,
+  login,
+  logout,
+  uploadImage,
+} = require('../../models/users');
 const {
   authMiddleware,
 } = require('../../middlewares/authMiddleware');
-
+const uploadMiddleware = require('../../middlewares/uploadMiddleware');
 const router = express.Router();
 
 router.post('/register', async (req, res, next) => {
@@ -52,7 +57,20 @@ router.post('/logout', authMiddleware, async (req, res, next) => {
 
 router.get('/current', authMiddleware, async (req, res, next) => {
   const data = req.user;
-  console.log(data);
   res.status(200).json({ message: data });
 });
+
+router.patch(
+  '/avatars',
+  authMiddleware,
+  uploadMiddleware.single('avatar'),
+  async (req, res, next) => {
+    const { path, filename } = req.file;
+    const { _id: id } = req.user;
+
+    const avatarURL = await uploadImage(path, filename, id);
+
+    res.status(200).json({ message: avatarURL });
+  }
+);
 module.exports = router;

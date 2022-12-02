@@ -34,12 +34,10 @@ const removeContact = async (contactId, ownerId) => {
 
 const addContact = async (body, ownerId) => {
   try {
-    console.log(body);
     const response = await Contacts.create({
       ...body,
       owner: ownerId,
     });
-    console.log(response);
     return response;
   } catch (error) {
     console.error(error.message);
