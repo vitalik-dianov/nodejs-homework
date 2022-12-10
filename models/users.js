@@ -7,6 +7,8 @@ const { User } = require('../db/usersModel');
 const { createError } = require('../helpers/errors');
 const gravatar = require('gravatar');
 const Jimp = require('jimp');
+const uuid = require('uuid');
+const  sendEmail  = require('./email');
 
 const register = async (email, password) => {
   try {
@@ -21,12 +23,16 @@ const register = async (email, password) => {
       { d: 'robohash', s: '250' },
       false
     );
+    const verifyToken = uuid.v4();
 
     const user = User.create({
       email,
       password: await bcrypt.hash(password, 10),
       avatarURL: url,
+      verifyToken,
     });
+
+    await sendEmail(email, verifyToken);
 
     return user;
   } catch (error) {
@@ -40,12 +46,16 @@ const login = async (email, password) => {
     if (!user) {
       throw createError(401, 'Email or password is wrong!');
     }
+
     const isValidPassword = await bcrypt.compare(
       password,
       user.password
     );
     if (!isValidPassword) {
       throw createError(401, 'Email or password is wrong!');
+    }
+    if (!user.verify) {
+      throw createError(401, 'User not verified');
     }
 
     const payload = {
@@ -92,10 +102,34 @@ const uploadImage = async (filepath, filename, id) => {
     await fs.unlink(filepath);
   }
 };
+
+const verifyUser = async verifyToken => {
+  const user = await User.findOne({ verifyToken });
+  if (!user) {
+    return false;
+  }
+  await User.findByIdAndUpdate(user._id, {
+    verifyToken: null,
+    verify: true,
+  });
+  return true;
+};
+
+const reVerifyUser = async email => {
+  const user = await User.findOne({ email });
+  if (user.verify) {
+    throw createError(400, 'Verification has already been passed');
+  }
+  await sendEmail(email, user.verifyToken);
+  return true;
+};
+
 module.exports = {
   register,
   login,
   authenticate,
   logout,
   uploadImage,
+  verifyUser,
+  reVerifyUser,
 };
