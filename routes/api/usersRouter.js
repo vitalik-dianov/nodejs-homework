@@ -10,6 +10,8 @@ const {
   login,
   logout,
   uploadImage,
+  verifyUser,
+  reVerifyUser,
 } = require('../../models/users');
 const {
   authMiddleware,
@@ -29,7 +31,7 @@ router.post('/register', async (req, res, next) => {
   if (data.status) {
     return res.status(data.status).json({ message: data.message });
   }
-
+// console.log(data);
   data
     ? res.status(201).json({ message: data })
     : res.status(400).json({ message: 'Bad request' });
@@ -73,4 +75,23 @@ router.patch(
     res.status(200).json({ message: avatarURL });
   }
 );
+
+router.get('/verify/:verifyToken', async (req, res, next) => {
+  const { verifyToken } = req.params;
+  const isValid = await verifyUser(verifyToken);
+
+  isValid
+    ? res.status(200).json({ message: 'Verification successful' })
+    : res.status(404).json({ message: 'User not found' });
+});
+
+router.post('/verify', async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400).json({ message: 'Missing required field email' });
+  }
+  await reVerifyUser(email);
+
+  res.status(200).json({ message: 'Verification email sent' });
+});
 module.exports = router;
